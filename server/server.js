@@ -15,28 +15,39 @@ import { stripeWebhooks } from './controllers/orderController.js';
 const app = express();
 const port = process.env.PORT || 4000;
 
-await connectDB()
-await connectCloudinary()
+await connectDB();
+await connectCloudinary();
 
-// Allow multiple origins
-const allowedOrigins = ['http://localhost:5173', 'https://buy-it-iota.vercel.app']
+// ✅ CORS middleware सबसे ऊपर होना चाहिए
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://buy-it-iota.vercel.app',
+];
 
-app.post('/stripe', express.raw({type: 'application/json'}), stripeWebhooks)
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+}));
 
-// Middleware configuration
+// ✅ Express को OPTIONS requests handle करने दो
+app.options('*', cors());
+
+// Stripe webhook को raw body चाहिए
+app.post('/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
+
+// बाकी middlewares अब लगाओ
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({origin: allowedOrigins, credentials: true}));
 
+app.get('/', (req, res) => res.send('API is Working'));
+app.use('/api/user', userRouter);
+app.use('/api/seller', sellerRouter);
+app.use('/api/product', productRouter);
+app.use('/api/cart', cartRouter);
+app.use('/api/address', addressRouter);
+app.use('/api/order', orderRouter);
 
-app.get('/', (req, res) => res.send("API is Working"));
-app.use('/api/user', userRouter)
-app.use('/api/seller', sellerRouter)
-app.use('/api/product', productRouter)
-app.use('/api/cart', cartRouter)
-app.use('/api/address', addressRouter)
-app.use('/api/order', orderRouter)
-
-app.listen(port, ()=>{
-    console.log(`Server is running on http://localhost:${port}`)
-})
+app.listen(port, () => {
+  console.log(`✅ Server is running on http://localhost:${port}`);
+});
